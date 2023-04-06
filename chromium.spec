@@ -954,7 +954,7 @@ udev.
 %patch -P107 -p1 -b .el7-extra-operator-equalequal
 %endif
 
-%patch -P108 -p1 -b .chrome_feed_response_metadata
+%patch -P108 -p1 -R -b .chrome_feed_response_metadata
 
 %patch -P130 -p1 -b .VirtualCursor-std-layout
 
