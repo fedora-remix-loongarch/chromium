@@ -1121,6 +1121,12 @@ CHROMIUM_CORE_GN_DEFINES+=' use_gold=false'
 CHROMIUM_CORE_GN_DEFINES+=' target_cpu="arm64"'
 %endif
 
+# clang =< 14 and C++20, linker errors std::u16string
+# build failure on rhel8
+%if 0%{?rhel} == 8
+CHROMIUM_CORE_GN_DEFINES+=' use_cxx17=true'
+%endif
+
 CHROMIUM_CORE_GN_DEFINES+=' icu_use_data_file=true'
 CHROMIUM_CORE_GN_DEFINES+=' target_os="linux"'
 CHROMIUM_CORE_GN_DEFINES+=' current_os="linux"'
