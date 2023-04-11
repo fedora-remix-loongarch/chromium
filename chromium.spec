@@ -376,6 +376,9 @@ Patch206: chromium-110-ozone-wayland-vaapi-support.patch
 # Apply these patches to work around EPEL8 issues
 Patch300: chromium-99.0.4844.51-rhel8-force-disable-use_gnome_keyring.patch
 
+# workaround for bug in clang 14 with c++20 on rhel9, linker errors std::u16string
+Patch301: chromium-112-workaround-llvm14-c++20-epel8.patch
+
 # Use chromium-latest.py to generate clean tarball from released build tarballs, found here:
 # http://build.chromium.org/buildbot/official/
 # For Chromium Fedora use chromium-latest.py --stable --ffmpegclean --ffmpegarm
@@ -973,6 +976,10 @@ udev.
 %patch -P300 -p1 -b .disblegnomekeyring
 %endif
 
+%if 0%{?rhel} == 8
+%patch -P301 -p1 -b .clang14_c++20
+%endif
+
 # Change shebang in all relevant files in this directory and all subdirectories
 # See `man find` for how the `-exec command {} +` syntax works
 find -type f \( -iname "*.py" \) -exec sed -i '1s=^#! */usr/bin/\(python\|env python\)[23]\?=#!%{__python3}=' {} +
@@ -1119,12 +1126,6 @@ CHROMIUM_CORE_GN_DEFINES+=' use_gold=false'
 
 %ifarch aarch64
 CHROMIUM_CORE_GN_DEFINES+=' target_cpu="arm64"'
-%endif
-
-# clang =< 14 and C++20, linker errors std::u16string
-# build failure on rhel8
-%if 0%{?rhel} == 8
-CHROMIUM_CORE_GN_DEFINES+=' use_cxx17=true'
 %endif
 
 CHROMIUM_CORE_GN_DEFINES+=' icu_use_data_file=true'
