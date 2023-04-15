@@ -241,7 +241,7 @@
 %endif
 
 Name:	chromium%{chromium_channel}
-Version: 112.0.5615.49
+Version: 112.0.5615.121
 Release: 1%{?dist}
 Summary: A WebKit (Blink) powered web browser that Google doesn't want you to use
 Url: http://www.chromium.org/Home
@@ -371,7 +371,8 @@ Patch146: chromium-110-LargerThan4k.patch
 # Upstream turned VAAPI on in Linux in 86
 Patch202: chromium-104.0.5112.101-enable-hardware-accelerated-mjpeg.patch
 Patch205: chromium-86.0.4240.75-fix-vaapi-on-intel.patch
-Patch206: chromium-110-ozone-wayland-vaapi-support.patch
+Patch206: chromium-112-ozone-wayland-vaapi-support.patch
+Patch207: chromium-112-enable-vaapi-ozone-wayland.patch
 
 # Apply these patches to work around EPEL8 issues
 Patch300: chromium-99.0.4844.51-rhel8-force-disable-use_gnome_keyring.patch
@@ -957,7 +958,9 @@ udev.
 %patch -P107 -p1 -b .el7-extra-operator-equalequal
 %endif
 
+%if 0%{?fedora} == 37
 %patch -P108 -p1 -R -b .chrome_feed_response_metadata
+%endif
 
 %patch -P130 -p1 -b .VirtualCursor-std-layout
 
@@ -970,6 +973,7 @@ udev.
 %patch -P202 -p1 -b .accel-mjpeg
 %patch -P205 -p1 -b .vaapi-intel-fix
 %patch -P206 -p1 -b .wayland-vaapi
+%patch -P207 -p1 -b .enable-wayland-vaapi
 %endif
 
 %if 0%{?rhel} >= 8
@@ -1649,6 +1653,9 @@ getent group chrome-remote-desktop >/dev/null || groupadd -r chrome-remote-deskt
 %{chromium_path}/chromedriver
 
 %changelog
+* Sat Apr 15 2023 Than Ngo <than@redhat.com> - 112.0.5615.121-1
+- update to 112.0.5615.121
+
 * Wed Apr 05 2023 Than Ngo <than@redhat.com> - 112.0.5615.49-1
 - update to 112.0.5615.49
 - fix #2184142, Small fonts in menus
