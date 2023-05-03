@@ -363,9 +363,6 @@ Patch300: chromium-113-rhel8-force-disable-use_gnome_keyring.patch
 # workaround for bug in clang 14 with c++20 on rhel9, linker errors std::u16string
 Patch301: chromium-112-workaround-llvm14-c++20-epel8.patch
 
-# workaround for bug in clang 14 with c++20 on rhel9, linker errors std::u16string
-Patch301: chromium-112-workaround-llvm14-c++20-epel8.patch
-
 # Use chromium-latest.py to generate clean tarball from released build tarballs, found here:
 # http://build.chromium.org/buildbot/official/
 # For Chromium Fedora use chromium-latest.py --stable --ffmpegclean --ffmpegarm
