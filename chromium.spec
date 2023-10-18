@@ -43,6 +43,12 @@
 # set nodejs_version
 %global nodejs_version v20.6.1
 
+%global system_nodejs 1
+# RHEL 8 needs newer nodejs
+%if 0%{?rhel} == 8
+%global system_nodejs 0
+%endif
+
 # set esbuild_version
 %global esbuild_version 0.19.2
 
@@ -168,8 +174,8 @@
 %global bundleminizip 1
 %endif
 
-# enable qt backend for el >= 8 and fedora >= 35
-%if 0%{?rhel} >= 8 || 0%{?fedora} >=35
+# enable qt backend for el >= 8 and fedora
+%if 0%{?rhel} >= 8 || 0%{?fedora}
 %global use_qt 1
 %else
 %global use_qt 0
@@ -207,7 +213,7 @@
 %global bundleffmpegfree 0
 %global bundlelibaom 1
 # system freetype on fedora > 36
-%if 0%{?fedora} > 36
+%if 0%{?fedora}
 %global bundlefreetype 0
 %else
 %global bundlefreetype 1
@@ -248,7 +254,7 @@
 %endif
 
 Name:	chromium%{chromium_channel}
-Version: 118.0.5993.70
+Version: 118.0.5993.88
 Release: 1%{?dist}
 Summary: A WebKit (Blink) powered web browser that Google doesn't want you to use
 Url: http://www.chromium.org/Home
@@ -348,8 +354,8 @@ Patch114: chromium-107-ffmpeg-duration.patch
 Patch115: chromium-107-proprietary-codecs.patch
 # drop av_stream_get_first_dts from internal ffmpeg
 Patch116: chromium-112-ffmpeg-first_dts.patch
-# revert new-channel-layout-api on f36, old ffmpeg-free
-Patch117: chromium-108-ffmpeg-revert-new-channel-layout-api.patch
+# fix tab crash with SIGTRAP error when using system ffmpeg
+Patch117: chromium-118-sigtrap_system_ffmpeg.patch
 
 # revert AV1 VAAPI video encode due to old libva on el9
 Patch130: chromium-114-revert-av1enc-el9.patch
@@ -415,8 +421,7 @@ Source9: chromium-browser.xml
 Source10: chrome-remote-desktop@.service
 Source11: master_preferences
 
-# RHEL 8 needs newer nodejs
-%if 0%{?rhel} == 8
+%if ! %{system_nodejs}
 Source12: https://nodejs.org/dist/%{nodejs_version}/node-%{nodejs_version}-linux-x64.tar.xz
 Source13: https://nodejs.org/dist/%{nodejs_version}/node-%{nodejs_version}-linux-arm64.tar.xz
 %endif
@@ -517,19 +522,17 @@ BuildRequires:	mesa-libgbm-devel
 
 # Old Fedora (before 30) uses the 1.2 minizip by default.
 # Newer Fedora needs to use the compat package
-%if 0%{?fedora} >= 30
-BuildRequires:	minizip-compat-devel
+# Fedora > 39 uses minizip-ng
+%if ! %{bundleminizip}
+%if 0%{?fedora} > 39 || 0%{?rhel} > 9
+# BuildRequires: minizip-ng-devel
+BuildRequires: minizip-compat-devel
 %else
-# RHEL 8 needs to use the compat-minizip (provided by minizip1.2)
-%if 0%{?rhel} >= 8
-BuildRequires:	minizip-compat-devel
+BuildRequires: minizip-compat-devel
 %endif
 %endif
 
-# RHEL 8 needs newer nodejs
-%if 0%{?rhel} == 8
-# nothing
-%else
+%if %{system_nodejs}
 BuildRequires: nodejs
 %endif
 
@@ -661,12 +664,6 @@ BuildRequires: brotli-devel
 BuildRequires: speech-dispatcher-devel
 BuildRequires: yasm
 BuildRequires: zlib-devel
-
-# Technically, this logic probably applies to older rhel too... but whatever.
-# RHEL 8 and 9 do not have gnome-keyring. Not sure why, but whatever again.
-%if 0%{?fedora} || 0%{?rhel} == 7
-BuildRequires:	pkgconfig(gnome-keyring-1)
-%endif
 
 # remote desktop needs this
 BuildRequires:	pam-devel
@@ -847,21 +844,7 @@ Chromium is an open-source web browser, powered by WebKit (Blink).
 
 %package common
 Summary: Files needed for both the headless_shell and full Chromium
-# Chromium needs an explicit Requires: minizip-compat
-# We put it here to cover headless too.
-%if 0%{?fedora} >= 30
-Requires: minizip-compat%{_isa}
-%else
-%if 0%{?rhel} == 7
-# Do nothing
-%else
-%if 0%{?rhel} == 9
-Requires: minizip1.2%{_isa}
-%else
-Requires: minizip%{_isa}
-%endif
-%endif
-%endif
+
 # -common doesn't have chrome-remote-desktop bits
 # but we need to clean it up if it gets disabled again
 # NOTE: Check obsoletes version to be sure it matches
@@ -954,9 +937,7 @@ udev.
 %patch -P114 -p1 -b .system-ffmppeg
 %patch -P115 -p1 -b .prop-codecs
 %patch -P116 -p1 -b .first_dts
-%if 0%{?fedora} == 36
-%patch -P117 -p1 -b .revert-new-channel-layout-api
-%endif
+%patch -P117 -p1 -b .sigtrap_system_ffmpeg
 %endif
 
 # EPEL specific patches
@@ -1019,8 +1000,8 @@ udev.
 # See `man find` for how the `-exec command {} +` syntax works
 find -type f \( -iname "*.py" \) -exec sed -i '1s=^#! */usr/bin/\(python\|env python\)[23]\?=#!%{__python3}=' {} +
 
-# install nodejs
-%if 0%{?rhel} == 8
+# Add correct path for nodejs binary
+%if ! %{system_nodejs}
   pushd third_party/node/linux
 %ifarch x86_64
   tar xf %{SOURCE12}
@@ -1704,6 +1685,13 @@ getent group chrome-remote-desktop >/dev/null || groupadd -r chrome-remote-deskt
 %{chromium_path}/chromedriver
 
 %changelog
+* Wed Oct 18 2023 Than Ngo <than@redhat.com> - 118.0.5993.88-1
+- update to 118.0.5993.88
+- cleanup the package dependencies
+
+* Mon Oct 16 2023 Than Ngo <than@redhat.com> - 118.0.5993.70-2
+- fix tab crash with SIGTRAP when using system ffmpeg
+
 * Wed Oct 11 2023 Than Ngo <than@redhat.com> - 118.0.5993.70-1
 - update to 118.0.5993.70
     - CVE-2023-5218: Use after free in Site Isolation.
